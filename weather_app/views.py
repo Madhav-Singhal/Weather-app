@@ -16,19 +16,30 @@ def index(request):
 
         if form.is_valid():
             new_city = form.cleaned_data['name']
-            existing_city_count = City.objects.filter(name=new_city).count()
+            new = new_city.lower().capitalize()
+            existing_city_count = City.objects.filter(name=new).count()
 
             if existing_city_count == 0:
                 r = requests.get(url.format(new_city)).json()
 
                 if r['cod'] == 200:
 
-                    form.save()
+                    x = form.save(commit = False)
+                    x.name = new
+                    x.save()
+
 
                 else:
                     err_msg = 'no such city'
             else:
-                err_msg = 'City already exist'
+                City.objects.filter(name=new).delete()
+                r = requests.get(url.format(new_city)).json()
+
+                if r['cod'] == 200:
+
+                    x = form.save(commit = False)
+                    x.name = new
+                    x.save()
 
 
         if err_msg:
@@ -44,7 +55,8 @@ def index(request):
 
     form = CityForm()
 
-    cities = City.objects.all()
+    cities = reversed(City.objects.all())
+
 
     weather_data = []
 
@@ -56,6 +68,7 @@ def index(request):
         city_weather = {
             'city' : city.name,
             'temperature' : r['main']['temp'],
+            'ctemp':  format((r['main']['temp'] - 32)/1.8000, '0.2f'),
             'description' : r['weather'][0]['description'],
             'icon' : r['weather'][0]['icon'],
         }
